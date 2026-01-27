@@ -2,6 +2,9 @@
 import React from 'react';
 import type { GameState } from '../hooks/useGameState';
 import { useRoundData } from '../hooks/useRoundData';
+import strikeSound from '../assets/strike.mp3';
+import okSound from '../assets/ok.mp3';
+import roundSound from '../assets/round.mp3';
 
 interface BoardProps {
     gameState: GameState;
@@ -29,7 +32,7 @@ export const Board: React.FC<BoardProps> = ({ gameState }) => {
     React.useEffect(() => {
         const currentTotal = team_a_strikes + team_b_strikes;
         if (currentTotal > prevStrikesRef.current) {
-            const audio = new Audio('/src/assets/strike.mp3');
+            const audio = new Audio(strikeSound);
             audio.play().catch(e => console.log('Audio play failed', e));
         }
         prevStrikesRef.current = currentTotal;
@@ -38,7 +41,7 @@ export const Board: React.FC<BoardProps> = ({ gameState }) => {
     React.useEffect(() => {
         const currentTotal = revealed_answers.length;
         if (currentTotal > prevRevealedAnswersRef.current) {
-            const audio = new Audio('/src/assets/ok.mp3');
+            const audio = new Audio(okSound);
             audio.play().catch(e => console.log('Audio play failed', e));
         }
         prevRevealedAnswersRef.current = currentTotal;
@@ -47,7 +50,7 @@ export const Board: React.FC<BoardProps> = ({ gameState }) => {
     React.useEffect(() => {
         const currentRound = current_round;
         if (currentRound > currentRoundRef.current) {
-            const audio = new Audio('/src/assets/round.mp3');
+            const audio = new Audio(roundSound);
             audio.play().catch(e => console.log('Audio play failed', e));
         }
         currentRoundRef.current = currentRound;
