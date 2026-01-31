@@ -10,6 +10,7 @@ export const ContentManager: React.FC = () => {
 
     // Form States
     const [newQuestionText, setNewQuestionText] = useState('');
+    const [newQuestionIsFinal, setNewQuestionIsFinal] = useState(false);
     const [newAnswerText, setNewAnswerText] = useState('');
     const [newAnswerPoints, setNewAnswerPoints] = useState('');
 
@@ -46,11 +47,25 @@ export const ContentManager: React.FC = () => {
     const handleAddQuestion = async () => {
         if (!newQuestionText.trim()) return;
         try {
-            await questionsAPI.addQuestion(newQuestionText);
+            await questionsAPI.addQuestion(newQuestionText, newQuestionIsFinal);
             setNewQuestionText('');
+            setNewQuestionIsFinal(false);
             loadQuestions();
         } catch (error) {
             alert('Failed to add question');
+            console.error(error);
+        }
+    };
+
+    const handleToggleIsFinal = async (questionId: string, currentValue: boolean) => {
+        try {
+            const question = questions.find(q => q.id === questionId);
+            if (question) {
+                await questionsAPI.updateQuestion(questionId, question.text, !currentValue);
+                loadQuestions();
+            }
+        } catch (error) {
+            alert('Failed to update question');
             console.error(error);
         }
     };
@@ -85,13 +100,21 @@ export const ContentManager: React.FC = () => {
             {/* Add Question */}
             <div style={{ marginBottom: '20px', padding: '10px', background: '#f9f9f9' }}>
                 <h4>Add New Question</h4>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <input
                         value={newQuestionText}
                         onChange={e => setNewQuestionText(e.target.value)}
                         placeholder="Question text"
                         style={{ flex: 1, padding: '5px' }}
                     />
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}>
+                        <input
+                            type="checkbox"
+                            checked={newQuestionIsFinal}
+                            onChange={e => setNewQuestionIsFinal(e.target.checked)}
+                        />
+                        Final Question
+                    </label>
                     <button onClick={handleAddQuestion} style={{ padding: '5px 10px' }}>Add Question</button>
                 </div>
             </div>
@@ -104,15 +127,52 @@ export const ContentManager: React.FC = () => {
                         {questions.map((q, idx) => (
                             <li
                                 key={q.id}
-                                onClick={() => setSelectedQuestionId(q.id)}
                                 style={{
                                     padding: '10px',
                                     borderBottom: '1px solid #eee',
                                     background: selectedQuestionId === q.id ? '#e0f0ff' : 'white',
-                                    cursor: 'pointer'
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    gap: '10px'
                                 }}
                             >
-                                <strong>{idx + 1}.</strong> {q.text}
+                                <div
+                                    onClick={() => setSelectedQuestionId(q.id)}
+                                    style={{ flex: 1, cursor: 'pointer' }}
+                                >
+                                    <strong>{idx + 1}.</strong> {q.text}
+                                    {q.is_final && (
+                                        <span style={{
+                                            marginLeft: '10px',
+                                            padding: '2px 8px',
+                                            background: '#ff8800',
+                                            color: 'white',
+                                            borderRadius: '3px',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 'bold'
+                                        }}>
+                                            FINAL
+                                        </span>
+                                    )}
+                                </div>
+                                <label
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        fontSize: '0.9rem',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={q.is_final || false}
+                                        onChange={() => handleToggleIsFinal(q.id, q.is_final || false)}
+                                    />
+                                    Final
+                                </label>
                             </li>
                         ))}
                     </ul>
@@ -124,6 +184,18 @@ export const ContentManager: React.FC = () => {
                         <>
                             <h4>Manage Answers for:</h4>
                             <p><em>{questions.find(q => q.id === selectedQuestionId)?.text}</em></p>
+
+                            <div style={{
+                                marginBottom: '15px',
+                                padding: '10px',
+                                background: '#e8f5e9',
+                                border: '2px solid #4caf50',
+                                borderRadius: '5px',
+                                fontWeight: 'bold',
+                                fontSize: '1.1rem'
+                            }}>
+                                Total Points: {answers.reduce((sum, ans) => sum + ans.points, 0)}
+                            </div>
 
                             <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
                                 <input

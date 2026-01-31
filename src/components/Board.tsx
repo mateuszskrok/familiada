@@ -2,6 +2,7 @@
 import React from 'react';
 import type { GameState } from '../hooks/useGameState';
 import { useRoundData } from '../hooks/useRoundData';
+import { FinalModeBoard } from './FinalModeBoard';
 import strikeSound from '../assets/strike.mp3';
 import okSound from '../assets/ok.mp3';
 import roundSound from '../assets/round.mp3';
@@ -57,11 +58,17 @@ export const Board: React.FC<BoardProps> = ({ gameState }) => {
     }, [current_round]);
 
 
+
     // Sort answers by points descending (already done in API/Hook ideally, but ensuring here)
     // Actually API does it.
 
     // Create a fixed list of slots (e.g. 6) or just use the number of answers.
     // Familiada usually has fixed slots, but we'll use answers length.
+
+    // Render final mode board if in final mode
+    if (gameState.is_final_mode) {
+        return <FinalModeBoard gameState={gameState} />;
+    }
 
     return (
         <div className="board-container" style={{

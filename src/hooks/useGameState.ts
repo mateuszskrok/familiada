@@ -13,6 +13,9 @@ export interface GameState {
     team_a_strikes: number;
     team_b_strikes: number;
     is_final_mode: boolean;
+    timer_value: number;
+    timer_running: boolean;
+    answers_masked: boolean;
 }
 
 export const useGameState = () => {

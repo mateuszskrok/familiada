@@ -87,5 +87,16 @@ export const questionsAPI = {
 
         if (error) throw error;
         return data;
+    },
+
+    getFinalQuestions: async () => {
+        const { data, error } = await supabase
+            .from('questions')
+            .select('*')
+            .eq('is_final', true)
+            .order('id', { ascending: true });
+
+        if (error) throw error;
+        return data;
     }
 };
