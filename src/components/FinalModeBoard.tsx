@@ -75,20 +75,9 @@ export const FinalModeBoard: React.FC<FinalModeBoardProps> = ({ gameState }) => 
             );
         }
 
-        const isRevealed = revealed_answers.includes(answer.id);
-
-        if (isRevealed && !masked) {
-            return (
-                <>
-                    <span style={{ flex: 1, textAlign: 'left' }}>
-                        {answer.text}
-                    </span>
-                    <span style={{ fontWeight: 'bold', fontSize: '2rem', marginLeft: '20px' }}>
-                        {answer.points}
-                    </span>
-                </>
-            );
-        } else if (isRevealed && masked) {
+        // Answer is provided, so it's already been determined to be revealed
+        // Just check if it should be masked
+        if (masked) {
             return (
                 <>
                     <span style={{ flex: 1, textAlign: 'left' }}>
@@ -101,9 +90,11 @@ export const FinalModeBoard: React.FC<FinalModeBoardProps> = ({ gameState }) => 
             return (
                 <>
                     <span style={{ flex: 1, textAlign: 'left' }}>
-                        ..................
+                        {answer.text}
                     </span>
-                    <span>--</span>
+                    <span style={{ fontWeight: 'bold', fontSize: '2rem', marginLeft: '20px' }}>
+                        {answer.points}
+                    </span>
                 </>
             );
         }
@@ -165,18 +156,51 @@ export const FinalModeBoard: React.FC<FinalModeBoardProps> = ({ gameState }) => 
                         {finalQuestions.map((question, qIdx) => {
                             const answers = questionAnswers[question.id] || [];
 
-                            // Find which answers are revealed and in what order
-                            const revealedForThisQuestion = answers
-                                .map(ans => ({
-                                    answer: ans,
-                                    revealIndex: revealed_answers.indexOf(ans.id)
-                                }))
-                                .filter(item => item.revealIndex !== -1)
-                                .sort((a, b) => a.revealIndex - b.revealIndex);
+                            // Get all revealed items for this question (including NO_ANSWER markers)
+                            const revealedItems: Array<{ answer?: Answer; revealIndex: number; isNoAnswer: boolean }> = [];
 
-                            // First revealed = Person A, Second revealed = Person B
-                            const answerA = revealedForThisQuestion[0]?.answer;
-                            const answerB = revealedForThisQuestion[1]?.answer;
+                            // Process revealed_answers to find items for this question
+                            revealed_answers.forEach((revealedId, index) => {
+                                // Handle both string and number IDs
+                                const revealedIdStr = String(revealedId);
+
+                                // Check if it's a NO_ANSWER marker for THIS question
+                                if (revealedIdStr.startsWith(`NO_ANSWER_${question.id}_`)) {
+                                    revealedItems.push({
+                                        revealIndex: index,
+                                        isNoAnswer: true
+                                    });
+                                } else {
+                                    // It's a regular answer ID - check both string and number comparison
+                                    const answer = answers.find(ans => ans.id === revealedId || String(ans.id) === revealedIdStr);
+                                    if (answer) {
+                                        revealedItems.push({
+                                            answer,
+                                            revealIndex: index,
+                                            isNoAnswer: false
+                                        });
+                                    }
+                                }
+                            });
+
+                            // Sort by reveal order
+                            revealedItems.sort((a, b) => a.revealIndex - b.revealIndex);
+
+                            // Assign to columns: first item goes to A, second to B
+                            // NO_ANSWER markers count as taking a slot but show nothing
+                            const itemA = revealedItems[0];
+                            const itemB = revealedItems[1];
+
+                            const answerA = itemA && !itemA.isNoAnswer ? itemA.answer : undefined;
+                            const answerB = itemB && !itemB.isNoAnswer ? itemB.answer : undefined;
+
+                            // Debug logging
+                            console.log(`[Q${qIdx + 1}] Question:`, question.text);
+                            console.log(`[Q${qIdx + 1}] Revealed answers:`, revealed_answers);
+                            console.log(`[Q${qIdx + 1}] Question answers:`, answers.map(a => ({ id: a.id, text: a.text })));
+                            console.log(`[Q${qIdx + 1}] Revealed items:`, revealedItems);
+                            console.log(`[Q${qIdx + 1}] Answer A:`, answerA);
+                            console.log(`[Q${qIdx + 1}] Answer B:`, answerB);
 
                             return (
                                 <div key={question.id} style={{

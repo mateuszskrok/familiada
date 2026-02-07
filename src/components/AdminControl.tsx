@@ -14,6 +14,16 @@ export const AdminControl: React.FC<AdminControlProps> = ({ gameState }) => {
     const [finalAnswers, setFinalAnswers] = React.useState<Record<string, any[]>>({});
     const [loadingFinal, setLoadingFinal] = React.useState(false);
 
+    // Local state for team names to prevent race condition with realtime updates
+    const [teamANameLocal, setTeamANameLocal] = React.useState(gameState.team_a_name || 'Team A');
+    const [teamBNameLocal, setTeamBNameLocal] = React.useState(gameState.team_b_name || 'Team B');
+
+    // Update local state when gameState changes (but only if not currently editing)
+    React.useEffect(() => {
+        setTeamANameLocal(gameState.team_a_name || 'Team A');
+        setTeamBNameLocal(gameState.team_b_name || 'Team B');
+    }, [gameState.team_a_name, gameState.team_b_name]);
+
     // Fetch final questions when in final mode
     React.useEffect(() => {
         if (gameState.is_final_mode) {
@@ -91,7 +101,11 @@ export const AdminControl: React.FC<AdminControlProps> = ({ gameState }) => {
         });
     };
 
-    const addStrike = (team: 'A' | 'B') => {
+    const addStrike = (team: 'A' | 'B', event?: React.MouseEvent<HTMLButtonElement>) => {
+        // Blur the button to prevent focus lock
+        if (event?.currentTarget) {
+            event.currentTarget.blur();
+        }
         if (team === 'A') {
             updateState({ team_a_strikes: gameState.team_a_strikes + 1 });
         } else {
@@ -100,6 +114,10 @@ export const AdminControl: React.FC<AdminControlProps> = ({ gameState }) => {
     };
 
     const winRound = (team: 'A' | 'B') => {
+        if (gameState.current_round_score <= 0) {
+            alert('Cannot award points: current round score is 0. Reveal some answers first.');
+            return;
+        }
         if (team === 'A') {
             updateState({ team_a_score: gameState.team_a_score + gameState.current_round_score });
         } else {
@@ -151,6 +169,20 @@ export const AdminControl: React.FC<AdminControlProps> = ({ gameState }) => {
         });
     };
 
+    // Add a "No Answer" marker for final mode
+    const addNoAnswer = async (questionId: string) => {
+        try {
+            // Add a special marker to revealed_answers with question ID
+            const noAnswerMarker = `NO_ANSWER_${questionId}_${Date.now()}`;
+            const currentRevealed = Array.isArray(gameState.revealed_answers) ? gameState.revealed_answers : [];
+            await updateState({
+                revealed_answers: [...currentRevealed, noAnswerMarker]
+            });
+        } catch (error) {
+            console.error('Failed to add no answer marker', error);
+        }
+    };
+
     // Timer countdown effect
     React.useEffect(() => {
         if (!gameState.timer_running || gameState.timer_value <= 0) {
@@ -177,6 +209,35 @@ export const AdminControl: React.FC<AdminControlProps> = ({ gameState }) => {
     return (
         <div style={{ padding: '20px', background: '#f0f0f0', border: '1px solid #ccc' }}>
             <h3>Admin Control Panel</h3>
+
+            {/* Team Names */}
+            <div style={{ marginBottom: '20px', padding: '15px', background: '#fff', border: '2px solid #002b5e', borderRadius: '5px' }}>
+                <h4 style={{ marginBottom: '10px' }}>Team Names</h4>
+                <div style={{ display: 'flex', gap: '20px' }}>
+                    <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Team A Name:</label>
+                        <input
+                            type="text"
+                            value={teamANameLocal}
+                            onChange={(e) => setTeamANameLocal(e.target.value)}
+                            onBlur={() => updateState({ team_a_name: teamANameLocal })}
+                            placeholder="Team A"
+                            style={{ width: '100%', padding: '8px', fontSize: '1rem' }}
+                        />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Team B Name:</label>
+                        <input
+                            type="text"
+                            value={teamBNameLocal}
+                            onChange={(e) => setTeamBNameLocal(e.target.value)}
+                            onBlur={() => updateState({ team_b_name: teamBNameLocal })}
+                            placeholder="Team B"
+                            style={{ width: '100%', padding: '8px', fontSize: '1rem' }}
+                        />
+                    </div>
+                </div>
+            </div>
 
             {/* Question/Answer Section - Conditional based on mode */}
             {!gameState.is_final_mode ? (
@@ -211,14 +272,14 @@ export const AdminControl: React.FC<AdminControlProps> = ({ gameState }) => {
 
                     <div style={{ marginBottom: '20px' }}>
                         <h4>Round Win (Adds Pot to Team)</h4>
-                        <button onClick={() => winRound('A')}>Win Team A</button>
-                        <button onClick={() => winRound('B')}>Win Team B</button>
+                        <button onClick={() => winRound('A')}>Win {gameState.team_a_name || 'Team A'}</button>
+                        <button onClick={() => winRound('B')}>Win {gameState.team_b_name || 'Team B'}</button>
                     </div>
 
                     <div style={{ marginBottom: '20px' }}>
                         <h4>Strikes</h4>
-                        <button onClick={() => addStrike('A')}>Strike Team A</button>
-                        <button onClick={() => addStrike('B')}>Strike Team B</button>
+                        <button onMouseDown={(e) => addStrike('A', e)}>Strike {gameState.team_a_name || 'Team A'}</button>
+                        <button onMouseDown={(e) => addStrike('B', e)}>Strike {gameState.team_b_name || 'Team B'}</button>
                         <button onClick={resetStrikes}>Reset Strikes</button>
                     </div>
                 </div>
@@ -269,6 +330,20 @@ export const AdminControl: React.FC<AdminControlProps> = ({ gameState }) => {
                                         {(finalAnswers[q.id] || []).length === 0 && (
                                             <div style={{ color: '#999', fontSize: '0.9rem' }}>No answers</div>
                                         )}
+                                        <button
+                                            onClick={() => addNoAnswer(q.id)}
+                                            style={{
+                                                padding: '8px 12px',
+                                                background: '#ff6b6b',
+                                                color: 'white',
+                                                border: '1px solid #ff5252',
+                                                cursor: 'pointer',
+                                                fontWeight: 'bold',
+                                                marginTop: '5px'
+                                            }}
+                                        >
+                                            --- (No Answer)
+                                        </button>
                                     </div>
                                 </div>
                             ))}

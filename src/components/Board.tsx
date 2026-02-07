@@ -25,6 +25,39 @@ export const Board: React.FC<BoardProps> = ({ gameState }) => {
 
     const { answers, loading } = useRoundData(current_round);
 
+    // Audio refs to prevent partial playback
+    const strikeAudioRef = React.useRef<HTMLAudioElement | null>(null);
+    const okAudioRef = React.useRef<HTMLAudioElement | null>(null);
+    const roundAudioRef = React.useRef<HTMLAudioElement | null>(null);
+
+    // Preload audio files on mount
+    React.useEffect(() => {
+        strikeAudioRef.current = new Audio(strikeSound);
+        okAudioRef.current = new Audio(okSound);
+        roundAudioRef.current = new Audio(roundSound);
+
+        // Preload
+        strikeAudioRef.current.load();
+        okAudioRef.current.load();
+        roundAudioRef.current.load();
+
+        return () => {
+            // Cleanup on unmount
+            if (strikeAudioRef.current) {
+                strikeAudioRef.current.pause();
+                strikeAudioRef.current = null;
+            }
+            if (okAudioRef.current) {
+                okAudioRef.current.pause();
+                okAudioRef.current = null;
+            }
+            if (roundAudioRef.current) {
+                roundAudioRef.current.pause();
+                roundAudioRef.current = null;
+            }
+        };
+    }, []);
+
     // Sound effect for strikes
     const prevStrikesRef = React.useRef(0);
     const prevRevealedAnswersRef = React.useRef(0);
@@ -32,9 +65,10 @@ export const Board: React.FC<BoardProps> = ({ gameState }) => {
 
     React.useEffect(() => {
         const currentTotal = team_a_strikes + team_b_strikes;
-        if (currentTotal > prevStrikesRef.current) {
-            const audio = new Audio(strikeSound);
-            audio.play().catch(e => console.log('Audio play failed', e));
+        if (currentTotal > prevStrikesRef.current && strikeAudioRef.current) {
+            // Reset and play
+            strikeAudioRef.current.currentTime = 0;
+            strikeAudioRef.current.play().catch(e => console.log('Audio play failed', e));
         }
         prevStrikesRef.current = currentTotal;
     }, [team_a_strikes, team_b_strikes]);
@@ -42,17 +76,29 @@ export const Board: React.FC<BoardProps> = ({ gameState }) => {
     React.useEffect(() => {
         const currentTotal = revealed_answers.length;
         if (currentTotal > prevRevealedAnswersRef.current) {
-            const audio = new Audio(okSound);
-            audio.play().catch(e => console.log('Audio play failed', e));
+            // Check if the last added item is a NO_ANSWER marker
+            const lastItem = revealed_answers[revealed_answers.length - 1];
+            const isNoAnswer = typeof lastItem === 'string' && lastItem.startsWith('NO_ANSWER_');
+
+            if (isNoAnswer && strikeAudioRef.current) {
+                // Play strike sound for NO_ANSWER
+                strikeAudioRef.current.currentTime = 0;
+                strikeAudioRef.current.play().catch(e => console.log('Audio play failed', e));
+            } else if (okAudioRef.current) {
+                // Play ok sound for correct answer
+                okAudioRef.current.currentTime = 0;
+                okAudioRef.current.play().catch(e => console.log('Audio play failed', e));
+            }
         }
         prevRevealedAnswersRef.current = currentTotal;
     }, [revealed_answers]);
 
     React.useEffect(() => {
         const currentRound = current_round;
-        if (currentRound > currentRoundRef.current) {
-            const audio = new Audio(roundSound);
-            audio.play().catch(e => console.log('Audio play failed', e));
+        if (currentRound > currentRoundRef.current && roundAudioRef.current) {
+            // Reset and play
+            roundAudioRef.current.currentTime = 0;
+            roundAudioRef.current.play().catch(e => console.log('Audio play failed', e));
         }
         currentRoundRef.current = currentRound;
     }, [current_round]);
@@ -91,7 +137,7 @@ export const Board: React.FC<BoardProps> = ({ gameState }) => {
                 height: '100%',
                 justifyContent: 'top'
             }}>
-                <div style={{ marginBottom: '10px' }}>Team A</div>
+                <div style={{ marginBottom: '10px' }}>{gameState.team_a_name || 'Team A'}</div>
                 <div style={{ fontSize: '6rem', fontWeight: 'bold' }}>{team_a_score}</div>
                 <div style={{
                     fontSize: '9rem',
@@ -181,7 +227,7 @@ export const Board: React.FC<BoardProps> = ({ gameState }) => {
                 height: '100%',
                 justifyContent: 'top'
             }}>
-                <div style={{ marginBottom: '10px' }}>Team B</div>
+                <div style={{ marginBottom: '10px' }}>{gameState.team_b_name || 'Team B'}</div>
                 <div style={{ fontSize: '6rem', fontWeight: 'bold' }}>{team_b_score}</div>
                 <div style={{
                     fontSize: '9rem',

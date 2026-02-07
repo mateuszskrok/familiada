@@ -12,6 +12,8 @@ export interface GameState {
     team_b_score: number;
     team_a_strikes: number;
     team_b_strikes: number;
+    team_a_name: string;
+    team_b_name: string;
     is_final_mode: boolean;
     timer_value: number;
     timer_running: boolean;
