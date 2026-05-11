@@ -18,6 +18,7 @@ export interface GameState {
     timer_value: number;
     timer_running: boolean;
     answers_masked: boolean;
+    current_set_id: string | null;
 }
 
 export const useGameState = () => {

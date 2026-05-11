@@ -16,7 +16,7 @@ export interface Answer {
     points: number;
 }
 
-export const useRoundData = (roundNumber: number) => {
+export const useRoundData = (roundNumber: number, setId: string | null = null) => {
     const [question, setQuestion] = useState<Question | null>(null);
     const [answers, setAnswers] = useState<Answer[]>([]);
     const [loading, setLoading] = useState(true);
@@ -26,17 +26,11 @@ export const useRoundData = (roundNumber: number) => {
             setLoading(true);
             try {
                 // 1. Fetch all questions to determine which one corresponds to roundNumber
-                // Using 'order' by created_at to have a consistent order
-                const { data: allQuestions, error: qError } = await supabase
-                    .from('questions')
-                    .select('*')
-                    .order('id', { ascending: true }); // Assuming ID order or create a 'seq' col later
-
-                if (qError) throw qError;
+                const allQuestions = await questionsAPI.getQuestions(setId);
 
                 if (allQuestions && allQuestions.length >= roundNumber) {
                     const targetQuestion = allQuestions[roundNumber - 1];
-                    setQuestion(targetQuestion);
+                    setQuestion(targetQuestion as Question);
 
                     // 2. Fetch answers for this question
                     const answersData = await questionsAPI.getAnswers(targetQuestion.id);
@@ -53,7 +47,7 @@ export const useRoundData = (roundNumber: number) => {
         };
 
         fetchData();
-    }, [roundNumber]);
+    }, [roundNumber, setId]);
 
     return { question, answers, loading };
 };

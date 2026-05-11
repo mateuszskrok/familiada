@@ -2,7 +2,26 @@
 import { supabase } from '../supabaseClient';
 
 export const questionsAPI = {
-    addQuestion: async (text: string, isFinal: boolean = false) => {
+    getSets: async () => {
+        const { data, error } = await supabase
+            .from('sets')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        return data;
+    },
+
+    createSet: async (name: string) => {
+        const { data, error } = await supabase
+            .from('sets')
+            .insert([{ name }])
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
+    },
+
+    addQuestion: async (text: string, isFinal: boolean = false, setId?: string | null) => {
         const { data, error } = await supabase
             .from('questions')
             .insert([{ text, is_final: isFinal }])
@@ -10,6 +29,17 @@ export const questionsAPI = {
             .single();
 
         if (error) throw error;
+
+        if (setId && data) {
+            const { error: qsError } = await supabase
+                .from('question_sets')
+                .insert([{ question_id: data.id, set_id: setId }]);
+            if (qsError) {
+                console.error('Error assigning question to set:', qsError);
+                // We won't throw here to avoid breaking if just the relation fails, but ideally it should be handled
+            }
+        }
+
         return data;
     },
 
@@ -79,7 +109,25 @@ export const questionsAPI = {
         return data;
     },
 
-    getQuestions: async () => {
+    getQuestions: async (setId?: string | null) => {
+        if (setId) {
+            const { data: qsData, error: qsError } = await supabase
+                .from('question_sets')
+                .select('question_id')
+                .eq('set_id', setId);
+            if (qsError) throw qsError;
+            const qIds = qsData.map(qs => qs.question_id);
+            if (qIds.length === 0) return [];
+
+            const { data, error } = await supabase
+                .from('questions')
+                .select('*')
+                .in('id', qIds)
+                .order('id', { ascending: true });
+            if (error) throw error;
+            return data;
+        }
+
         const { data, error } = await supabase
             .from('questions')
             .select('*')
@@ -89,7 +137,26 @@ export const questionsAPI = {
         return data;
     },
 
-    getFinalQuestions: async () => {
+    getFinalQuestions: async (setId?: string | null) => {
+        if (setId) {
+            const { data: qsData, error: qsError } = await supabase
+                .from('question_sets')
+                .select('question_id')
+                .eq('set_id', setId);
+            if (qsError) throw qsError;
+            const qIds = qsData.map(qs => qs.question_id);
+            if (qIds.length === 0) return [];
+
+            const { data, error } = await supabase
+                .from('questions')
+                .select('*')
+                .eq('is_final', true)
+                .in('id', qIds)
+                .order('id', { ascending: true });
+            if (error) throw error;
+            return data;
+        }
+
         const { data, error } = await supabase
             .from('questions')
             .select('*')

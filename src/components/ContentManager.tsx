@@ -3,10 +3,15 @@ import React, { useState, useEffect } from 'react';
 import { questionsAPI } from '../api/questionsAPI';
 import type { Question, Answer } from '../hooks/useRoundData';
 
-export const ContentManager: React.FC = () => {
+export const ContentManager: React.FC<{ currentSetId?: string | null }> = ({ currentSetId = null }) => {
     const [questions, setQuestions] = useState<Question[]>([]);
     const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
     const [answers, setAnswers] = useState<Answer[]>([]);
+    
+    // Sets
+    const [sets, setSets] = useState<{ id: string, name: string }[]>([]);
+    const [activeSetId, setActiveSetId] = useState<string | null>(currentSetId);
+    const [newSetName, setNewSetName] = useState('');
 
     // Form States
     const [newQuestionText, setNewQuestionText] = useState('');
@@ -14,9 +19,18 @@ export const ContentManager: React.FC = () => {
     const [newAnswerText, setNewAnswerText] = useState('');
     const [newAnswerPoints, setNewAnswerPoints] = useState('');
 
-    const loadQuestions = async () => {
+    const loadSets = async () => {
         try {
-            const data = await questionsAPI.getQuestions();
+            const data = await questionsAPI.getSets();
+            setSets(data);
+        } catch (error) {
+            console.error('Error loading sets:', error);
+        }
+    };
+
+    const loadQuestions = async (setId?: string | null) => {
+        try {
+            const data = await questionsAPI.getQuestions(setId);
             setQuestions(data as Question[]);
         } catch (error) {
             console.error('Error loading questions:', error);
@@ -33,8 +47,18 @@ export const ContentManager: React.FC = () => {
     };
 
     useEffect(() => {
-        loadQuestions();
+        loadSets();
     }, []);
+
+    useEffect(() => {
+        if (currentSetId !== undefined) {
+            setActiveSetId(currentSetId);
+        }
+    }, [currentSetId]);
+
+    useEffect(() => {
+        loadQuestions(activeSetId);
+    }, [activeSetId]);
 
     useEffect(() => {
         if (selectedQuestionId) {
@@ -47,12 +71,25 @@ export const ContentManager: React.FC = () => {
     const handleAddQuestion = async () => {
         if (!newQuestionText.trim()) return;
         try {
-            await questionsAPI.addQuestion(newQuestionText, newQuestionIsFinal);
+            await questionsAPI.addQuestion(newQuestionText, newQuestionIsFinal, activeSetId);
             setNewQuestionText('');
             setNewQuestionIsFinal(false);
-            loadQuestions();
+            loadQuestions(activeSetId);
         } catch (error) {
             alert('Failed to add question');
+            console.error(error);
+        }
+    };
+
+    const handleCreateSet = async () => {
+        if (!newSetName.trim()) return;
+        try {
+            const newSet = await questionsAPI.createSet(newSetName);
+            setNewSetName('');
+            loadSets();
+            setActiveSetId(newSet.id);
+        } catch (error) {
+            alert('Failed to create set');
             console.error(error);
         }
     };
@@ -62,7 +99,7 @@ export const ContentManager: React.FC = () => {
             const question = questions.find(q => q.id === questionId);
             if (question) {
                 await questionsAPI.updateQuestion(questionId, question.text, !currentValue);
-                loadQuestions();
+                loadQuestions(activeSetId);
             }
         } catch (error) {
             alert('Failed to update question');
@@ -96,6 +133,31 @@ export const ContentManager: React.FC = () => {
     return (
         <div style={{ padding: '20px', background: '#fff', color: '#000' }}>
             <h2>Content Manager</h2>
+
+            {/* Manage Sets */}
+            <div style={{ marginBottom: '20px', padding: '10px', background: '#f0f8ff' }}>
+                <h4>Wybierz Zestaw</h4>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <select
+                        value={activeSetId || ''}
+                        onChange={e => setActiveSetId(e.target.value || null)}
+                        style={{ padding: '5px', flex: 1 }}
+                    >
+                        <option value="">Wszystkie pytania</option>
+                        {sets.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                    </select>
+
+                    <input
+                        value={newSetName}
+                        onChange={e => setNewSetName(e.target.value)}
+                        placeholder="Nowy zestaw..."
+                        style={{ padding: '5px' }}
+                    />
+                    <button onClick={handleCreateSet} style={{ padding: '5px 10px' }}>Dodaj Zestaw</button>
+                </div>
+            </div>
 
             {/* Add Question */}
             <div style={{ marginBottom: '20px', padding: '10px', background: '#f9f9f9' }}>

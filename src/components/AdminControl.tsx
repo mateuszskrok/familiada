@@ -9,10 +9,23 @@ interface AdminControlProps {
 }
 
 export const AdminControl: React.FC<AdminControlProps> = ({ gameState }) => {
-    const { question, answers, loading: roundLoading } = useRoundData(gameState.current_round);
+    const { question, answers, loading: roundLoading } = useRoundData(gameState.current_round, gameState.current_set_id);
     const [finalQuestions, setFinalQuestions] = React.useState<any[]>([]);
     const [finalAnswers, setFinalAnswers] = React.useState<Record<string, any[]>>({});
     const [loadingFinal, setLoadingFinal] = React.useState(false);
+    const [sets, setSets] = React.useState<{ id: string, name: string }[]>([]);
+
+    React.useEffect(() => {
+        const loadSets = async () => {
+            try {
+                const data = await questionsAPI.getSets();
+                setSets(data);
+            } catch (error) {
+                console.error('Error loading sets:', error);
+            }
+        };
+        loadSets();
+    }, []);
 
     // Local state for team names to prevent race condition with realtime updates
     const [teamANameLocal, setTeamANameLocal] = React.useState(gameState.team_a_name || 'Team A');
@@ -30,7 +43,7 @@ export const AdminControl: React.FC<AdminControlProps> = ({ gameState }) => {
             const fetchFinalQuestions = async () => {
                 setLoadingFinal(true);
                 try {
-                    const questions = await questionsAPI.getFinalQuestions();
+                    const questions = await questionsAPI.getFinalQuestions(gameState.current_set_id);
                     setFinalQuestions(questions || []);
 
                     // Fetch answers for each final question
@@ -209,6 +222,21 @@ export const AdminControl: React.FC<AdminControlProps> = ({ gameState }) => {
     return (
         <div style={{ padding: '20px', background: '#f0f0f0', border: '1px solid #ccc' }}>
             <h3>Admin Control Panel</h3>
+
+            {/* Set Selection */}
+            <div style={{ marginBottom: '20px', padding: '15px', background: '#fff', border: '2px solid #002b5e', borderRadius: '5px' }}>
+                <h4 style={{ marginBottom: '10px' }}>Aktywny Zestaw Pytań</h4>
+                <select
+                    value={gameState.current_set_id || ''}
+                    onChange={(e) => updateState({ current_set_id: e.target.value || null })}
+                    style={{ width: '100%', padding: '8px', fontSize: '1rem' }}
+                >
+                    <option value="">Wszystkie pytania</option>
+                    {sets.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                </select>
+            </div>
 
             {/* Team Names */}
             <div style={{ marginBottom: '20px', padding: '15px', background: '#fff', border: '2px solid #002b5e', borderRadius: '5px' }}>

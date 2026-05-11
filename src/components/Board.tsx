@@ -23,7 +23,7 @@ export const Board: React.FC<BoardProps> = ({ gameState }) => {
         revealed_answers
     } = gameState;
 
-    const { answers, loading } = useRoundData(current_round);
+    const { answers, loading } = useRoundData(current_round, gameState.current_set_id);
 
     // Audio refs to prevent partial playback
     const strikeAudioRef = React.useRef<HTMLAudioElement | null>(null);

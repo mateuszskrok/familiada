@@ -47,7 +47,7 @@ export const AdminView: React.FC = () => {
             {mode === 'game' ? (
                 <AdminControl gameState={gameState} />
             ) : (
-                <ContentManager />
+                <ContentManager currentSetId={gameState.current_set_id} />
             )}
         </div>
     );
