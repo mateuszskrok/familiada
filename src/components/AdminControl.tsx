@@ -383,9 +383,25 @@ export const AdminControl: React.FC<AdminControlProps> = ({ gameState }) => {
 
             {/* Question/Answer Section - Conditional based on mode */}
             {!gameState.is_final_mode ? (
-                <div style={{ marginBottom: '20px', padding: '10px', background: '#e0e0e0' }}>
-                    <h4>Current Question: {roundLoading ? 'Loading...' : (question?.text || 'No question found')}</h4>
-                    <div style={{ display: 'grid', gap: '10px' }}>
+                <div style={{ marginBottom: '20px', padding: '15px', background: '#e0e0e0', borderRadius: '5px' }}>
+                    {/* Highlighted Question in Black */}
+                    <div style={{ 
+                        margin: '5px 0 15px 0', 
+                        padding: '15px', 
+                        background: '#fff', 
+                        borderLeft: '5px solid #002b5e', 
+                        borderRadius: '4px',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)' 
+                    }}>
+                        <span style={{ fontSize: '0.85rem', color: '#666', display: 'block', marginBottom: '5px', textTransform: 'uppercase', fontWeight: 'bold' }}>
+                            Aktualne pytanie:
+                        </span>
+                        <h3 style={{ margin: 0, color: '#000000', fontSize: '1.4rem', fontWeight: 'bold' }}>
+                            {roundLoading ? 'Ładowanie...' : (question?.text || 'Brak pytania w tej rundzie')}
+                        </h3>
+                    </div>
+
+                    <div style={{ display: 'grid', gap: '10px', marginBottom: '20px' }}>
                         {answers.map(answer => {
                             const isRevealed = gameState.revealed_answers.includes(answer.id);
                             return (
@@ -407,22 +423,40 @@ export const AdminControl: React.FC<AdminControlProps> = ({ gameState }) => {
                         })}
                         {answers.length === 0 && !roundLoading && <div>No answers found</div>}
                     </div>
+
+                    {/* Round Win (Adds Pot to Team) */}
                     <div style={{ marginBottom: '20px' }}>
-                        <h4>Round Control</h4>
-                        <button onClick={handleNextRound}>Next Round ({gameState.current_round + 1})</button>
+                        <h4 style={{ margin: '0 0 8px 0' }}>Zwycięstwo w rundzie (dodanie punktów z puli do konta drużyny)</h4>
+                        <button onClick={() => winRound('A')}>Wygrywa {gameState.team_a_name || 'Team A'}</button>
+                        <button onClick={() => winRound('B')}>Wygrywa {gameState.team_b_name || 'Team B'}</button>
                     </div>
 
+                    {/* Błędy (Strikes) */}
                     <div style={{ marginBottom: '20px' }}>
-                        <h4>Round Win (Adds Pot to Team)</h4>
-                        <button onClick={() => winRound('A')}>Win {gameState.team_a_name || 'Team A'}</button>
-                        <button onClick={() => winRound('B')}>Win {gameState.team_b_name || 'Team B'}</button>
+                        <h4 style={{ margin: '0 0 8px 0' }}>Błędy</h4>
+                        <button onMouseDown={(e) => addStrike('A', e)}>Błąd {gameState.team_a_name || 'Team A'}</button>
+                        <button onMouseDown={(e) => addStrike('B', e)}>Błąd {gameState.team_b_name || 'Team B'}</button>
+                        <button onClick={resetStrikes} style={{ marginLeft: '10px' }}>Resetuj błędy</button>
                     </div>
 
-                    <div style={{ marginBottom: '20px' }}>
-                        <h4>Strikes</h4>
-                        <button onMouseDown={(e) => addStrike('A', e)}>Strike {gameState.team_a_name || 'Team A'}</button>
-                        <button onMouseDown={(e) => addStrike('B', e)}>Strike {gameState.team_b_name || 'Team B'}</button>
-                        <button onClick={resetStrikes}>Reset Strikes</button>
+                    {/* Round Control (Następna Runda) - placed below errors */}
+                    <div style={{ borderTop: '1px solid #ccc', paddingTop: '15px' }}>
+                        <h4 style={{ margin: '0 0 8px 0' }}>Sterowanie rundami</h4>
+                        <button 
+                            onClick={handleNextRound}
+                            style={{
+                                background: '#002b5e',
+                                color: 'white',
+                                padding: '10px 20px',
+                                fontSize: '1rem',
+                                fontWeight: 'bold',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer'
+                            }}
+                        >
+                            Następna Runda ({gameState.current_round + 1})
+                        </button>
                     </div>
                 </div>
 
