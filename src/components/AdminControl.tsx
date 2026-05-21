@@ -8,12 +8,60 @@ interface AdminControlProps {
     gameState: GameState;
 }
 
+const FALLBACK_JOKES = [
+    "– Jak nazywa się najszybsza potrawa?\n– Zapieprzanka!",
+    "– Dlaczego ryby żyją w wodzie?\n– Żeby koty nie miały tak łatwo.",
+    "– Co robi rolnik na polu?\n– Uprawia... kulturę fizyczną!",
+    "– Co mówi elektryk do kolegi?\n– Bądźmy w kontakcie!",
+    "– Dlaczego pingwiny nie latają?\n– Bo nie stać ich na bilety lotnicze.",
+    "– Jak nazywa się żona ginekologa?\n– Poczciwa kobieta.",
+    "– Co robi lekarz w lodówce?\n– Operuje zamrażalnik!",
+    "– Jak nazywa się pies bez nóg?\n– Nie nazywa się, i tak nie przyjdzie.",
+    "– Dlaczego marchewka jest pomarańczowa?\n– Bo gdyby była zielona, byłaby ogórkiem!",
+    "– Co robi dyrektor na lekcji fizyki?\n– Przewodzi!"
+];
+
 export const AdminControl: React.FC<AdminControlProps> = ({ gameState }) => {
     const { question, answers, loading: roundLoading } = useRoundData(gameState.current_round, gameState.current_set_id);
     const [finalQuestions, setFinalQuestions] = React.useState<any[]>([]);
     const [finalAnswers, setFinalAnswers] = React.useState<Record<string, any[]>>({});
     const [loadingFinal, setLoadingFinal] = React.useState(false);
     const [sets, setSets] = React.useState<{ id: string, name: string }[]>([]);
+    const [jokes, setJokes] = React.useState<{ id: string | number, content: string }[]>([]);
+    const [currentJoke, setCurrentJoke] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        // Set initial random joke from fallbacks
+        const randomIdx = Math.floor(Math.random() * FALLBACK_JOKES.length);
+        setCurrentJoke(FALLBACK_JOKES[randomIdx]);
+
+        const fetchJokes = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('jokes')
+                    .select('id, content');
+                if (error) {
+                    console.error('Error fetching jokes from DB:', error);
+                } else if (data && data.length > 0) {
+                    setJokes(data);
+                    // Select a random joke from the newly loaded database jokes
+                    const randomIdxDb = Math.floor(Math.random() * data.length);
+                    setCurrentJoke(data[randomIdxDb].content);
+                }
+            } catch (err) {
+                console.error('Failed to fetch jokes:', err);
+            }
+        };
+        fetchJokes();
+    }, []);
+
+    const handleDrawJoke = () => {
+        const jokePool = jokes.length > 0 ? jokes.map(j => j.content) : FALLBACK_JOKES;
+        if (jokePool.length > 0) {
+            const randomIdx = Math.floor(Math.random() * jokePool.length);
+            setCurrentJoke(jokePool[randomIdx]);
+        }
+    };
 
     React.useEffect(() => {
         const loadSets = async () => {
@@ -222,6 +270,72 @@ export const AdminControl: React.FC<AdminControlProps> = ({ gameState }) => {
     return (
         <div style={{ padding: '20px', background: '#f0f0f0', border: '1px solid #ccc' }}>
             <h3>Admin Control Panel</h3>
+
+            {/* Jokes Section - Karol Strasburger's Joke Corner */}
+            <div style={{
+                marginBottom: '20px',
+                padding: '15px',
+                background: 'linear-gradient(135deg, #fff9e6 0%, #fff0cc 100%)',
+                border: '2px solid #ffcc00',
+                borderRadius: '8px',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+                position: 'relative',
+                overflow: 'hidden'
+            }}>
+                <div style={{
+                    position: 'absolute',
+                    top: '-10px',
+                    right: '-10px',
+                    fontSize: '4rem',
+                    opacity: 0.1,
+                    userSelect: 'none'
+                }}>
+                    🎭
+                </div>
+                <h4 style={{ margin: '0 0 10px 0', color: '#b38600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>🎭</span> Kącik Suchego Żartu Prowadzącego
+                </h4>
+                <div style={{
+                    background: '#fff',
+                    padding: '12px',
+                    borderRadius: '6px',
+                    border: '1px solid #ffe0b3',
+                    minHeight: '60px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontStyle: 'italic',
+                    whiteSpace: 'pre-line',
+                    textAlign: 'center',
+                    fontSize: '1.05rem',
+                    color: '#4d3d00',
+                    lineHeight: '1.4',
+                    marginBottom: '10px'
+                }}>
+                    {currentJoke}
+                </div>
+                <button
+                    onClick={handleDrawJoke}
+                    style={{
+                        background: '#ffcc00',
+                        color: '#4d3d00',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '4px',
+                        fontWeight: 'bold',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'background 0.2s',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#e6b800'}
+                    onMouseOut={(e) => e.currentTarget.style.background = '#ffcc00'}
+                >
+                    🔄 Losuj suchara
+                </button>
+            </div>
 
             {/* Set Selection */}
             <div style={{ marginBottom: '20px', padding: '15px', background: '#fff', border: '2px solid #002b5e', borderRadius: '5px' }}>
