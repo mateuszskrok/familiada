@@ -75,6 +75,30 @@ export const questionsAPI = {
         if (error) throw error;
     },
 
+    updateAnswer: async (answerId: string, text: string, points: number) => {
+        const { data, error } = await supabase
+            .from('answers')
+            .update({ text, points })
+            .eq('id', answerId)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    },
+
+    deleteQuestion: async (questionId: string) => {
+        // Safe cascading deletes in case DB doesn't have CASCADE
+        await supabase.from('question_sets').delete().eq('question_id', questionId);
+        await supabase.from('answers').delete().eq('question_id', questionId);
+        const { error } = await supabase
+            .from('questions')
+            .delete()
+            .eq('id', questionId);
+
+        if (error) throw error;
+    },
+
     revealAnswer: async (answerId: string) => {
         // 1. Get current state
         const { data: currentState, error: fetchError } = await supabase

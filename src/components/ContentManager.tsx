@@ -19,6 +19,11 @@ export const ContentManager: React.FC<{ currentSetId?: string | null }> = ({ cur
     const [newAnswerText, setNewAnswerText] = useState('');
     const [newAnswerPoints, setNewAnswerPoints] = useState('');
 
+    // Edit Answer State
+    const [editingAnswerId, setEditingAnswerId] = useState<string | null>(null);
+    const [editAnswerText, setEditAnswerText] = useState('');
+    const [editAnswerPoints, setEditAnswerPoints] = useState('');
+
     const loadSets = async () => {
         try {
             const data = await questionsAPI.getSets();
@@ -130,6 +135,38 @@ export const ContentManager: React.FC<{ currentSetId?: string | null }> = ({ cur
         }
     };
 
+    const handleDeleteQuestion = async (questionId: string) => {
+        if (!confirm('Czy na pewno chcesz usunąć to pytanie wraz z odpowiedziami?')) return;
+        try {
+            await questionsAPI.deleteQuestion(questionId);
+            if (selectedQuestionId === questionId) {
+                setSelectedQuestionId(null);
+            }
+            loadQuestions(activeSetId);
+        } catch (error) {
+            alert('Błąd podczas usuwania pytania');
+            console.error(error);
+        }
+    };
+
+    const handleStartEditAnswer = (ans: Answer) => {
+        setEditingAnswerId(ans.id);
+        setEditAnswerText(ans.text);
+        setEditAnswerPoints(ans.points.toString());
+    };
+
+    const handleSaveEditAnswer = async (answerId: string) => {
+        if (!editAnswerText.trim() || !editAnswerPoints) return;
+        try {
+            await questionsAPI.updateAnswer(answerId, editAnswerText, parseInt(editAnswerPoints));
+            setEditingAnswerId(null);
+            if (selectedQuestionId) loadAnswers(selectedQuestionId);
+        } catch (error) {
+            alert('Failed to update answer');
+            console.error(error);
+        }
+    };
+
     return (
         <div style={{ padding: '20px', background: '#fff', color: '#000' }}>
             <h2>Content Manager</h2>
@@ -218,23 +255,42 @@ export const ContentManager: React.FC<{ currentSetId?: string | null }> = ({ cur
                                         </span>
                                     )}
                                 </div>
-                                <label
-                                    onClick={(e) => e.stopPropagation()}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '5px',
-                                        fontSize: '0.9rem',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={q.is_final || false}
-                                        onChange={() => handleToggleIsFinal(q.id, q.is_final || false)}
-                                    />
-                                    Final
-                                </label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <label
+                                        onClick={(e) => e.stopPropagation()}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '5px',
+                                            fontSize: '0.9rem',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={q.is_final || false}
+                                            onChange={() => handleToggleIsFinal(q.id, q.is_final || false)}
+                                        />
+                                        Final
+                                    </label>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteQuestion(q.id);
+                                        }}
+                                        style={{
+                                            background: '#ff4d4d',
+                                            color: 'white',
+                                            border: 'none',
+                                            padding: '4px 8px',
+                                            borderRadius: '3px',
+                                            cursor: 'pointer',
+                                            fontSize: '0.85rem'
+                                        }}
+                                    >
+                                        Usuń
+                                    </button>
+                                </div>
                             </li>
                         ))}
                     </ul>
@@ -278,9 +334,38 @@ export const ContentManager: React.FC<{ currentSetId?: string | null }> = ({ cur
 
                             <ul style={{ listStyle: 'none', padding: 0 }}>
                                 {answers.map(ans => (
-                                    <li key={ans.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px', borderBottom: '1px solid #eee' }}>
-                                        <span>{ans.text} ({ans.points} pts)</span>
-                                        <button onClick={() => handleDeleteAnswer(ans.id)} style={{ color: 'red' }}>Delete</button>
+                                    <li key={ans.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 5px', borderBottom: '1px solid #eee' }}>
+                                        {editingAnswerId === ans.id ? (
+                                            <>
+                                                <div style={{ display: 'flex', gap: '10px', flex: 1, marginRight: '10px' }}>
+                                                    <input
+                                                        value={editAnswerText}
+                                                        onChange={e => setEditAnswerText(e.target.value)}
+                                                        style={{ flex: 2, padding: '5px' }}
+                                                        placeholder="Treść odpowiedzi"
+                                                    />
+                                                    <input
+                                                        type="number"
+                                                        value={editAnswerPoints}
+                                                        onChange={e => setEditAnswerPoints(e.target.value)}
+                                                        style={{ width: '80px', padding: '5px' }}
+                                                        placeholder="Punkty"
+                                                    />
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '5px' }}>
+                                                    <button onClick={() => handleSaveEditAnswer(ans.id)} style={{ color: 'green', padding: '4px 8px', cursor: 'pointer' }}>Zapisz</button>
+                                                    <button onClick={() => setEditingAnswerId(null)} style={{ padding: '4px 8px', cursor: 'pointer' }}>Anuluj</button>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span>{ans.text} ({ans.points} pts)</span>
+                                                <div style={{ display: 'flex', gap: '5px' }}>
+                                                    <button onClick={() => handleStartEditAnswer(ans)} style={{ color: 'blue', padding: '4px 8px', cursor: 'pointer' }}>Edytuj</button>
+                                                    <button onClick={() => handleDeleteAnswer(ans.id)} style={{ color: 'red', padding: '4px 8px', cursor: 'pointer' }}>Usuń</button>
+                                                </div>
+                                            </>
+                                        )}
                                     </li>
                                 ))}
                                 {answers.length === 0 && <li>No answers yet.</li>}
