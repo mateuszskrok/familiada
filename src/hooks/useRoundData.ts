@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
 import { questionsAPI } from '../api/questionsAPI';
 
 export interface Question {
