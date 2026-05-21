@@ -103,6 +103,21 @@ export const Board: React.FC<BoardProps> = ({ gameState }) => {
         currentRoundRef.current = currentRound;
     }, [current_round]);
 
+    // Sound effect when team scores increase
+    const prevTeamScoresRef = React.useRef({ a: team_a_score, b: team_b_score });
+
+    React.useEffect(() => {
+        const hasScoreIncreased = 
+            team_a_score > prevTeamScoresRef.current.a || 
+            team_b_score > prevTeamScoresRef.current.b;
+
+        if (hasScoreIncreased && okAudioRef.current) {
+            okAudioRef.current.currentTime = 0;
+            okAudioRef.current.play().catch(e => console.log('Audio play failed', e));
+        }
+        prevTeamScoresRef.current = { a: team_a_score, b: team_b_score };
+    }, [team_a_score, team_b_score]);
+
 
 
     // Sort answers by points descending (already done in API/Hook ideally, but ensuring here)
@@ -182,12 +197,12 @@ export const Board: React.FC<BoardProps> = ({ gameState }) => {
                             const isRevealed = revealed_answers.includes(ans.id);
                             return (
                                 <li key={ans.id} style={{
-                                    margin: '10px 0',
-                                    padding: '15px 30px',
+                                    margin: '5px 0',
+                                    padding: '10px 30px',
                                     fontSize: '3rem',
                                     display: 'flex',
                                     justifyContent: 'space-between',
-                                    height: '70px',
+                                    height: '60px',
                                     alignItems: 'center'
                                 }}>
                                     <span>{idx + 1}</span>
